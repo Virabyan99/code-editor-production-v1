@@ -1,7 +1,15 @@
+// components/EditorPane.tsx
+'use client';
+
+import useCodeMirror from '@/lib/useCodeMirror';
+
 export default function EditorPane() {
+  const editorRef = useCodeMirror();
+
   return (
-    <section className="h-full w-full bg-white p-4">
-      <p className="text-sm text-gray-400">Editor Pane (coming next lesson)</p>
-    </section>
+    <section
+      ref={editorRef}
+      className="h-full w-full overflow-x-hidden bg-white focus:outline-none"
+    />
   );
 }
