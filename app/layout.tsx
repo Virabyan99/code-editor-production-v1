@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fira_Code as FiraCode } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from 'next-themes';
 
 const firaCode = FiraCode({
   subsets: ["latin"],
@@ -19,8 +20,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={firaCode.variable}>
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning className={firaCode.variable}>
+      <body>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
