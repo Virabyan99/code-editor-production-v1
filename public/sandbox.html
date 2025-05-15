@@ -7,12 +7,36 @@
 </head>
 <body>
   <script>
-    // Inline worker script
     const workerScript = `
+      const THROTTLE_MS = 16; // ~= 60fps
+      let lastSent = 0;
+
+      function safeSerialize(arg) {
+        if (arg === null || typeof arg !== 'object') return String(arg);
+        try {
+          return JSON.stringify(arg, (_key, value) =>
+            typeof value === 'function' ? '[fn]' : value
+          );
+        } catch {
+          return '[unserialisable]';
+        }
+      }
+
+      function postLog(message) {
+        const now = performance.now();
+        if (now - lastSent < THROTTLE_MS) return; // drop frame
+        lastSent = now;
+        self.postMessage({ type: 'log', payload: message });
+      }
+
       self.console = {
-        log: (...args) => postMessage({ type: 'log', data: args }),
+        log: (...args) => {
+          const serializedArgs = args.map(a => safeSerialize(a)).join(' ');
+          postLog(serializedArgs);
+        },
         warn: (...args) => postMessage({ type: 'warn', data: args }),
         error: (...args) => postMessage({ type: 'error', data: args }),
+        clear: () => self.postMessage({ type: 'clear' }),
       };
 
       self.onmessage = (event) => {
@@ -28,23 +52,19 @@
       };
     `;
 
-    // Create a worker from the inline script using a Blob URL
     const blob = new Blob([workerScript], { type: 'application/javascript' });
     const worker = new Worker(URL.createObjectURL(blob));
 
-    // Handle messages from the parent window
     window.addEventListener('message', (event) => {
       if (event.data.type === 'run') {
         worker.postMessage(event.data.code);
       }
     });
 
-    // Forward worker messages to the parent window
     worker.onmessage = (event) => {
       window.parent.postMessage(event.data, '*');
     };
 
-    // Handle worker errors
     worker.onerror = (error) => {
       window.parent.postMessage({ type: 'error', data: [error.message] }, '*');
     };
