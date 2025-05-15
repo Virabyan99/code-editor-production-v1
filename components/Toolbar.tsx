@@ -6,9 +6,9 @@ import { useConsoleStore } from '@/lib/store';
 import { Sun, Moon, Download, Upload, ClipboardCopy } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { z } from 'zod';
-import { ChangeEvent, useRef } from 'react';
+import { ChangeEvent, useRef, useState, useEffect } from 'react';
 
-// Define schema for uploaded files
+// File schema (unchanged)
 const fileSchema = z.object({
   name: z.string().endsWith('.js').or(z.string().endsWith('.txt')).or(z.string().endsWith('.json')),
   content: z.string().min(1),
@@ -19,10 +19,16 @@ export default function Toolbar() {
   const code = useEditorStore((s) => s.code);
   const setCode = useEditorStore((s) => s.setCode);
   const clearConsole = useConsoleStore((s) => s.clear);
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme(); // Use resolvedTheme
   const inputRef = useRef<HTMLInputElement>(null);
+  const [mounted, setMounted] = useState(false);
 
-  /* Copy to clipboard */
+  // Set mounted to true after the component mounts on the client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Other functions (unchanged)
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(code);
@@ -32,7 +38,6 @@ export default function Toolbar() {
     }
   };
 
-  /* Download file */
   const download = () => {
     const blob = new Blob([code], { type: 'text/javascript' });
     const url = URL.createObjectURL(blob);
@@ -44,7 +49,6 @@ export default function Toolbar() {
     URL.revokeObjectURL(url);
   };
 
-  /* Upload handler */
   const onUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -57,12 +61,13 @@ export default function Toolbar() {
     } catch {
       alert('Invalid file type or empty content.');
     } finally {
-      e.target.value = ''; // Reset input for same-file reupload
+      e.target.value = '';
     }
   };
 
-  /* Theme toggle */
-  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+  };
 
   return (
     <header className="flex items-center gap-2 border-b px-4 py-2 shadow-sm">
@@ -112,7 +117,11 @@ export default function Toolbar() {
         className="p-2 text-gray-700 hover:bg-gray-100 rounded"
         title="Toggle theme"
       >
-        {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+        {mounted ? (
+          resolvedTheme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />
+        ) : (
+          <Moon className="size-4" /> // Default matches server render
+        )}
       </button>
     </header>
   );
