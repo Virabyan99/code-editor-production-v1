@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sandbox</title>
+</head>
+<body>
+  <script>
+    // Inline worker script
+    const workerScript = `
+      self.console = {
+        log: (...args) => postMessage({ type: 'log', data: args }),
+        warn: (...args) => postMessage({ type: 'warn', data: args }),
+        error: (...args) => postMessage({ type: 'error', data: args }),
+      };
+
+      self.onmessage = (event) => {
+        try {
+          const code = event.data;
+          const func = new Function(code);
+          func();
+          postMessage({ type: 'done' });
+        } catch (error) {
+          self.console.error(error.message);
+          postMessage({ type: 'done' });
+        }
+      };
+    `;
+
+    // Create a worker from the inline script using a Blob URL
+    const blob = new Blob([workerScript], { type: 'application/javascript' });
+    const worker = new Worker(URL.createObjectURL(blob));
+
+    // Handle messages from the parent window
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'run') {
+        worker.postMessage(event.data.code);
+      }
+    });
+
+    // Forward worker messages to the parent window
+    worker.onmessage = (event) => {
+      window.parent.postMessage(event.data, '*');
+    };
+
+    // Handle worker errors
+    worker.onerror = (error) => {
+      window.parent.postMessage({ type: 'error', data: [error.message] }, '*');
+    };
+  </script>
+</body>
+</html>
