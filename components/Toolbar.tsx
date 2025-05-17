@@ -1,14 +1,12 @@
 'use client';
 
 import { useCodeRunner } from '@/lib/useCodeRunner';
-import { useEditorStore } from '@/lib/store';
-import { useConsoleStore } from '@/lib/store';
+import { useEditorStore, useConsoleStore } from '@/lib/store';
 import { Sun, Moon, Download, Upload, ClipboardCopy } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { z } from 'zod';
 import { ChangeEvent, useRef, useState, useEffect } from 'react';
 
-// File schema (unchanged)
 const fileSchema = z.object({
   name: z.string().endsWith('.js').or(z.string().endsWith('.txt')).or(z.string().endsWith('.json')),
   content: z.string().min(1),
@@ -19,16 +17,14 @@ export default function Toolbar() {
   const code = useEditorStore((s) => s.code);
   const setCode = useEditorStore((s) => s.setCode);
   const clearConsole = useConsoleStore((s) => s.clear);
-  const { resolvedTheme, setTheme } = useTheme(); // Use resolvedTheme
+  const { resolvedTheme, setTheme } = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Set mounted to true after the component mounts on the client
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Other functions (unchanged)
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(code);
@@ -52,7 +48,6 @@ export default function Toolbar() {
   const onUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const text = await file.text();
     try {
       fileSchema.parse({ name: file.name, content: text });
@@ -69,6 +64,12 @@ export default function Toolbar() {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
+  // Add clear function
+  const clear = () => {
+    setCode('');        // Reset editor
+    clearConsole();     // Reset console
+  };
+
   return (
     <header className="flex items-center gap-2 border-b px-4 py-2 shadow-sm">
       <span className="font-bold">_ jspen</span>
@@ -83,6 +84,12 @@ export default function Toolbar() {
         className="ml-auto bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
       >
         Run
+      </button>
+      <button
+        onClick={clear} // Add Clear button
+        className="ml-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
+      >
+        Clear
       </button>
       <button
         onClick={copy}
@@ -120,7 +127,7 @@ export default function Toolbar() {
         {mounted ? (
           resolvedTheme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />
         ) : (
-          <Moon className="size-4" /> // Default matches server render
+          <Moon className="size-4" />
         )}
       </button>
     </header>
