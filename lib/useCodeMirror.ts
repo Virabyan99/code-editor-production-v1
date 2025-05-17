@@ -45,6 +45,9 @@ export default function useCodeMirror() {
             fontFamily: 'var(--font-fira-code), monospace',
             fontSize: '13px',
           },
+          '.cm-cursor': {
+            borderLeft: '1px solid var(--foreground)', // Fixed cursor styling
+          },
         }),
         keymap.of(defaultKeymap),
         fadeInExtension,
