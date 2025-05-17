@@ -38,6 +38,7 @@ export default function useCodeMirror() {
           '.cm-gutters': {
             backgroundColor: 'var(--gutter-background)',
             color: 'var(--gutter-foreground)',
+            borderRight: 'none',
           },
           '.cm-lineNumbers .cm-gutterElement': {
             color: 'var(--gutter-foreground)',
@@ -46,14 +47,13 @@ export default function useCodeMirror() {
           },
         }),
         keymap.of(defaultKeymap),
-        fadeInExtension, // Adds fade-in effect and cursor pulse
+        fadeInExtension,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const value = update.state.doc.toString();
             setCode(value);
           }
         }),
-        // Typing animation listener for fade-in effect
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const changes = [];

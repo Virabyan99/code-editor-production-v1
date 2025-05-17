@@ -9,7 +9,7 @@ export default function EditorPane() {
   return (
     <section
       ref={editorRef}
-      className="h-[91vh] w-full overflow-x-auto overflow-y-auto focus:outline-none"
+      className="h-[91vh] w-full overflow-x-auto overflow-y-auto bg-background focus:outline-none border-r border-border"
     />
   );
 }
