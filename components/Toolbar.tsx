@@ -2,7 +2,7 @@
 
 import { useCodeRunner } from '@/lib/useCodeRunner';
 import { useEditorStore, useConsoleStore } from '@/lib/store';
-import { Sun, Moon, Download, Upload, ClipboardCopy } from 'lucide-react';
+import { Sun, Moon, Download, Upload, ClipboardCopy, Code2Icon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { z } from 'zod';
 import { ChangeEvent, useRef, useState, useEffect } from 'react';
@@ -64,36 +64,27 @@ export default function Toolbar() {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
-  // Add clear function
   const clear = () => {
-    setCode('');        // Reset editor
-    clearConsole();     // Reset console
+    setCode('');
+    clearConsole();
   };
 
   return (
     <header className="flex items-center gap-2 border-b px-4 py-2 shadow-sm">
-      <span className="font-bold">_ jspen</span>
+      {/* Replaced text with logo */}
+      <img src="/logo.png" alt="jspen logo" className="h-8 w-auto" />
+     
+     
       <button
         onClick={() => console.log('Current code:', code)}
-        className="ml-2 bg-gray-500 text-white px-4 py-1 rounded hover:bg-gray-600"
+        className="ml-2 p-2 text-gray-700 hover:bg-gray-100 rounded"
+        title="Log current code"
       >
-        Log Code
-      </button>
-      <button
-        onClick={run}
-        className="ml-auto bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
-      >
-        Run
-      </button>
-      <button
-        onClick={clear} // Add Clear button
-        className="ml-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
-      >
-        Clear
+        <Code2Icon className="size-4" />
       </button>
       <button
         onClick={copy}
-        className="ml-2 p-2 text-gray-700 hover:bg-gray-100 rounded"
+        className="p-2 text-gray-700 hover:bg-gray-100 rounded"
         title="Copy to clipboard"
       >
         <ClipboardCopy className="size-4" />
@@ -129,6 +120,18 @@ export default function Toolbar() {
         ) : (
           <Moon className="size-4" />
         )}
+      </button> 
+       <button
+        onClick={run}
+        className="ml-auto bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
+      >
+        Run
+      </button>
+      <button
+        onClick={clear}
+        className="ml-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
+      >
+        Clear
       </button>
     </header>
   );

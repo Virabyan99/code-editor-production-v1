@@ -10,8 +10,12 @@ const firaCode = FiraCode({
 });
 
 export const metadata: Metadata = {
-  title: "jspen",
-  description: "JS to console playground",
+  title: "JS Pen",
+  description: "Javascript Online Code Editor",
+  icons: {
+    icon: "/faviconn.png",
+    
+  },
 };
 
 export default function RootLayout({
