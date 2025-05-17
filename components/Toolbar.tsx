@@ -81,14 +81,19 @@ export default function Toolbar() {
   }
 
   return (
-    <header className="flex items-center gap-2 border-b border-border px-4 py-2 shadow-sm bg-background">
-      <button className="p-2 rounded-full bg-background text-foreground hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-all duration-300">
-
-      <img
-        src="/logo.png"
-        alt="jspen logo"
-        className="h-8 w-auto  "
-      />
+    <header className="flex items-center gap-2 border-b border-border px-4  shadow-sm bg-background">
+      <button className=" rounded-full bg-background text-foreground  hover:text-gray-900 dark:hover:text-white transition-all duration-300">
+        <img
+          src={
+            mounted
+              ? resolvedTheme === 'dark'
+                ? '/logodark.png'
+                : '/logo.png'
+              : '/logo.png'
+          }
+          alt="jspen logo"
+          className="h-12 w-auto"
+        />
       </button>
 
       {/* Icon buttons */}

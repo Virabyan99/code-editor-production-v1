@@ -40,6 +40,10 @@ body {
   font-family: var(--font-fira-code), monospace !important;
 }
 
+.cm-content {
+    font-family: var(--font-fira-code), monospace !important;
+}
+
 .cm-gutters {
   border-right: none !important;
 }
