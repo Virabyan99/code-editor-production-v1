@@ -8,15 +8,14 @@ import { useEditorStore } from '@/lib/store';
 
 export default function useCodeMirror() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null); // Store the EditorView instance
+  const viewRef = useRef<EditorView | null>(null);
   const { code, setCode } = useEditorStore();
 
-  // Initialize the editor once
   useEffect(() => {
     if (!containerRef.current) return;
 
     const state = EditorState.create({
-      doc: code, // Start with initial code
+      doc: code,
       extensions: [
         lineNumbers(),
         javascript({ jsx: true, typescript: true }),
@@ -26,11 +25,25 @@ export default function useCodeMirror() {
             fontFamily: 'var(--font-fira-code), monospace',
             height: '100%',
             fontSize: '13px',
+            backgroundColor: 'var(--background)',
+            color: 'var(--foreground)',
+          },
+          '.cm-content': {
+            color: 'var(--foreground)',
           },
           '.cm-line': {
             lineHeight: '1.4em',
           },
           '.cm-scroller': { overflow: 'auto' },
+          '.cm-gutters': {
+            backgroundColor: 'var(--gutter-background)',
+            color: 'var(--gutter-foreground)',
+          },
+          '.cm-lineNumbers .cm-gutterElement': {
+            color: 'var(--gutter-foreground)',
+            fontFamily: 'var(--font-fira-code), monospace',
+            fontSize: '13px',
+          },
         }),
         keymap.of(defaultKeymap),
         EditorView.updateListener.of((update) => {
@@ -43,17 +56,15 @@ export default function useCodeMirror() {
     });
 
     const view = new EditorView({ state, parent: containerRef.current });
-    viewRef.current = view; // Save the view instance
+    viewRef.current = view;
     view.focus();
 
-    // Cleanup on unmount
     return () => {
       view.destroy();
       viewRef.current = null;
     };
-  }, [containerRef]); // Only run once when containerRef is ready
+  }, [containerRef]);
 
-  // Sync external code changes into the editor
   useEffect(() => {
     const view = viewRef.current;
     if (view && code !== view.state.doc.toString()) {
@@ -61,7 +72,7 @@ export default function useCodeMirror() {
         changes: { from: 0, to: view.state.doc.length, insert: code },
       });
     }
-  }, [code]); // Run when code changes externally
+  }, [code]);
 
   return containerRef;
 }

@@ -71,30 +71,28 @@ export default function Toolbar() {
 
   return (
     <header className="flex items-center gap-2 border-b px-4 py-2 shadow-sm">
-      {/* Replaced text with logo */}
       <img src="/logo.png" alt="jspen logo" className="h-8 w-auto" />
-     
-     
+
       <button
         onClick={() => console.log('Current code:', code)}
-        className="ml-2 p-2 text-gray-700 hover:bg-gray-100 rounded"
+        className="ml-2 p-2 text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
         title="Log current code"
       >
-        <Code2Icon className="size-4" />
+        <Code2Icon className="size-4 text-gray-800 dark:text-gray-300" />
       </button>
       <button
         onClick={copy}
-        className="p-2 text-gray-700 hover:bg-gray-100 rounded"
+        className="p-2 text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
         title="Copy to clipboard"
       >
-        <ClipboardCopy className="size-4" />
+        <ClipboardCopy className="size-4 text-gray-800 dark:text-gray-300" />
       </button>
       <button
         onClick={download}
-        className="p-2 text-gray-700 hover:bg-gray-100 rounded"
+        className="p-2 text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
         title="Download file"
       >
-        <Download className="size-4" />
+        <Download className="size-4 text-gray-800 dark:text-gray-300" />
       </button>
       <input
         ref={inputRef}
@@ -105,23 +103,27 @@ export default function Toolbar() {
       />
       <button
         onClick={() => inputRef.current?.click()}
-        className="p-2 text-gray-700 hover:bg-gray-100 rounded"
+        className="p-2 text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
         title="Upload file"
       >
-        <Upload className="size-4" />
+        <Upload className="size-4 text-gray-800 dark:text-gray-300" />
       </button>
       <button
         onClick={toggleTheme}
-        className="p-2 text-gray-700 hover:bg-gray-100 rounded"
+        className="p-2 text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
         title="Toggle theme"
       >
         {mounted ? (
-          resolvedTheme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />
+          resolvedTheme === 'dark' ? (
+            <Sun className="size-4 text-gray-800 dark:text-gray-300" />
+          ) : (
+            <Moon className="size-4 text-gray-800 dark:text-gray-300" />
+          )
         ) : (
-          <Moon className="size-4" />
+          <Moon className="size-4 text-gray-800 dark:text-gray-300" />
         )}
-      </button> 
-       <button
+      </button>
+      <button
         onClick={run}
         className="ml-auto bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
       >

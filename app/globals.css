@@ -3,11 +3,13 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
 }
 
 .dark {
-  --background: #0a0a0a;
+  --background: #1e2939;
   --foreground: #ededed;
+
 }
 
 html,
@@ -30,6 +32,43 @@ body {
   color: var(--foreground);
 }
 
-.cm-line {
+.cm-line,
+.cm-gutterElement {
   font-family: var(--font-fira-code), monospace !important;
+}
+
+.cm-gutters {
+  border-right: none !important;
+}
+
+.cm-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb {
+  background-color: var(--gutter-foreground);
+  border-radius: 4px;
+}
+
+.cm-scroller::-webkit-scrollbar-track {
+  background-color: var(--gutter-background);
+  border-radius: 4px;
+}
+
+
+
+.console-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.console-scroller::-webkit-scrollbar-thumb {
+  background-color: var(--gutter-foreground);
+  border-radius: 4px;
+}
+
+.console-scroller::-webkit-scrollbar-track {
+  background-color: var(--gutter-background);
+  border-radius: 4px;
 }

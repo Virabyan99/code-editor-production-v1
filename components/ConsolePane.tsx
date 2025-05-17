@@ -6,22 +6,22 @@ export default function ConsolePane() {
   const logs = useConsoleStore((s) => s.logs);
 
   return (
-    <div className="h-full w-full bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-md shadow-sm">
-      <div
-        className="h-full overflow-y-auto font-mono"
-        style={{
-          fontFamily: 'var(--font-fira-code), monospace',
-          fontSize: '13px', // Matches CodeMirror default
-          lineHeight: '1.4em', // Matches CodeMirror default
-          padding: '0', // No padding to align with editor
-        }}
-      >
-        {logs.map((log) => (
-          <p key={log.id} className="m-0 p-0 whitespace-pre-wrap">
-            {log.message}
-          </p>
-        ))}
-      </div>
-    </div>
+  <div className="h-[91vh] w-full overflow-y-auto  dark:bg-stone-800 border-l-1 shadow-sm">
+  <div
+  className="h-full overflow-y-auto font-mono text-foreground console-scroller"
+  style={{
+    fontFamily: 'var(--font-fira-code), monospace',
+    fontSize: '13px',
+    lineHeight: '1.4em',
+    padding: '0',
+  }}
+>
+    {logs.map((log) => (
+      <p key={log.id} className="m-0 p-0 whitespace-pre-wrap">
+        {log.message}
+      </p>
+    ))}
+  </div>
+</div>
   );
 }
