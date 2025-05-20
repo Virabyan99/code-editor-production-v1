@@ -8,7 +8,7 @@
 <body>
   <script>
     const workerScript = `
-      const THROTTLE_MS = 16; // ~= 60fps
+      const THROTTLE_MS = 16;
       let lastSent = 0;
 
       function safeSerialize(arg) {
@@ -24,7 +24,7 @@
 
       function postLog(message) {
         const now = performance.now();
-        if (now - lastSent < THROTTLE_MS) return; // drop frame
+        if (now - lastSent < THROTTLE_MS) return;
         lastSent = now;
         self.postMessage({ type: 'log', payload: message });
       }
@@ -34,22 +34,61 @@
           const serializedArgs = args.map(a => safeSerialize(a)).join(' ');
           postLog(serializedArgs);
         },
-        warn: (...args) => postMessage({ type: 'warn', data: args }),
-        error: (...args) => postMessage({ type: 'error', data: args }),
+        warn: (...args) => {
+          const serializedArgs = args.map(a => safeSerialize(a)).join(' ');
+          self.postMessage({ type: 'warn', data: serializedArgs });
+        },
+        error: (...args) => {
+          const serializedArgs = args.map(a => safeSerialize(a)).join(' ');
+          self.postMessage({ type: 'error', data: serializedArgs });
+        },
         clear: () => self.postMessage({ type: 'clear' }),
       };
 
       self.onmessage = (event) => {
-        try {
-          const code = event.data;
-          const func = new Function(code);
-          func();
-          postMessage({ type: 'done' });
-        } catch (error) {
-          self.console.error(error.message);
-          postMessage({ type: 'done' });
+        if (event.data.type === 'run') {
+          try {
+            const func = new Function(event.data.code);
+            func();
+            self.postMessage({ type: 'done' });
+          } catch (error) {
+            self.console.error(error.message);
+            self.postMessage({ type: 'done' });
+          }
+        } else if (event.data.type === 'dialogResult') {
+          self.postMessage(event.data); // Forward to dialog resolver
         }
       };
+
+      function nextId() {
+        if (self.crypto && typeof self.crypto.randomUUID === 'function') {
+          return self.crypto.randomUUID();
+        } else {
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
+        }
+      }
+
+      function makeDialog(kind) {
+        return (msg = '', def = '') => new Promise(resolve => {
+          const requestId = nextId();
+          self.postMessage({ type: 'dialog', payload: { kind, message: String(msg), defaultValue: def, requestId } });
+          function handler(e) {
+            if (e.data?.type === 'dialogResult' && e.data.payload.requestId === requestId) {
+              self.removeEventListener('message', handler);
+              resolve(e.data.payload.result);
+            }
+          }
+          self.addEventListener('message', handler);
+        });
+      }
+
+      self.alert   = makeDialog('alert');
+      self.prompt  = makeDialog('prompt');
+      self.confirm = makeDialog('confirm');
     `;
 
     const blob = new Blob([workerScript], { type: 'application/javascript' });
@@ -57,7 +96,9 @@
 
     window.addEventListener('message', (event) => {
       if (event.data.type === 'run') {
-        worker.postMessage(event.data.code);
+        worker.postMessage(event.data);
+      } else if (event.data.type === 'dialogResult') {
+        worker.postMessage(event.data);
       }
     });
 

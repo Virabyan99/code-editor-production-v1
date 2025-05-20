@@ -1,7 +1,9 @@
-import ConsolePane from "@/components/ConsolePane";
-import EditorPane from "@/components/EditorPane";
-import Toolbar from "@/components/Toolbar";
-
+// app/page.tsx
+import ConsolePane from '@/components/ConsolePane';
+import EditorPane from '@/components/EditorPane';
+import Toolbar from '@/components/Toolbar';
+import DialogBridge from '@/components/DialogBridge';
+import { DialogHost } from '@/components/DialogHost';
 
 const HomePage = () => {
   return (
@@ -11,6 +13,8 @@ const HomePage = () => {
         <EditorPane />
         <ConsolePane />
       </main>
+      <DialogBridge />
+      <DialogHost />
     </div>
   );
 };

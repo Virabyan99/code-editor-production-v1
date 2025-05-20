@@ -1,3 +1,4 @@
+// lib/useCodeRunner.ts
 import { useCallback, useEffect, useRef } from 'react';
 import { useEditorStore, useConsoleStore } from '@/lib/store';
 
@@ -8,6 +9,7 @@ export function useCodeRunner() {
 
   useEffect(() => {
     const iframe = document.createElement('iframe');
+    iframe.id = 'sandbox-iframe'; // Add ID for targeting
     iframe.src = '/sandbox.html';
     iframe.style.display = 'none';
     iframe.sandbox = 'allow-scripts';
@@ -39,11 +41,12 @@ export function useCodeRunner() {
     };
   }, [addLog, clear]);
 
-  const run = useCallback(() => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type: 'run', code }, '*');
-    }
-  }, [code]);
+const run = useCallback(() => {
+  if (iframeRef.current && iframeRef.current.contentWindow) {
+    console.log('Sending run message with code:', code);
+    iframeRef.current.contentWindow.postMessage({ type: 'run', code }, '*');
+  }
+}, [code]);
 
   return { run };
 }
