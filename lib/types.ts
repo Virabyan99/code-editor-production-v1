@@ -45,7 +45,14 @@ export type LogLevel =
   | 'assert'
   | 'dir'
   | 'table'
-  | 'clear';
+  | 'clear'
+  | 'debug'
+  | 'count'
+  | 'timeLog'
+  | 'timeEnd'
+  | 'group'
+  | 'groupCollapsed'
+  | 'groupEnd';
 
 export interface TableMeta {
   columns: string[];
@@ -58,8 +65,13 @@ export interface LogMessage {
   type: 'log';
   payload: {
     level: LogLevel;
-    args: unknown[];
+    args?: unknown[];
     stack?: string;
     tableMeta?: TableMeta;
+    label?: string;      // For count, timeLog, timeEnd, group
+    value?: number;      // For count
+    elapsed?: number;    // For timeLog, timeEnd
+    extra?: string[];    // For timeLog, timeEnd
+    depth?: number;      // For all messages, especially groups
   };
 }

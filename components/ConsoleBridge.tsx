@@ -1,4 +1,3 @@
-// components/ConsoleBridge.tsx
 'use client';
 import { useConsoleStore } from '@/lib/consoleStore';
 import { useEffect, useRef } from 'react';
@@ -10,7 +9,7 @@ export default function ConsoleBridge() {
   useEffect(() => {
     function onMsg(e: MessageEvent) {
       if (e.data?.type !== 'log') return;
-      const { level } = e.data.payload;
+      const { level, ...payload } = e.data.payload;
       if (level === 'clear') {
         clear();
         return;
@@ -19,9 +18,7 @@ export default function ConsoleBridge() {
         id: nextId.current++,
         ts: Date.now(),
         level,
-        data: e.data.payload.args,
-        stack: e.data.payload.stack,
-        tableMeta: e.data.payload.tableMeta,
+        ...payload,
       });
     }
     window.addEventListener('message', onMsg);

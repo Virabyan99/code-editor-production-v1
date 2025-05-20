@@ -5,13 +5,18 @@ interface Entry {
   id: number;
   ts: number;
   level: string;
-  data: string[];
-  stack?: string;
+  depth: number;        // Required for indentation
+  args?: string[];      // For log, debug, etc.
+  stack?: string;       // For trace, assert
   tableMeta?: {
     columns: string[];
     rows: unknown[][];
     truncated: boolean;
   };
+  label?: string;       // For count, timers, groups
+  value?: number;       // For count
+  elapsed?: number;     // For timeLog, timeEnd
+  extra?: string[];     // For timeLog, timeEnd
 }
 
 interface ConsoleState {

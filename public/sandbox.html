@@ -8,11 +8,14 @@
 <body>
   <script>
     const workerScript = `
-      const THROTTLE_MS = 16;
-  let lastSent = 0;
   let pendingLogs = [];
   const MAX_LEN = 2000;  // chars per serialized item
   const MAX_ROWS = 1000;
+
+  // New state for Lesson 7
+  const counts = new Map();  // Tracks console.count()
+  const times = new Map();   // Tracks console.time() start times
+  let depth = 0;             // Tracks group nesting level
 
   const safeStringify = (obj) => {
     try {
@@ -27,21 +30,36 @@
       type: 'log',
       payload: {
         level,
+        depth,  // Include depth in every message
         args: args.map(safeStringify),
         ...extra,
       },
     };
-    const now = performance.now();
-    if (now - lastSent < THROTTLE_MS) {
-      pendingLogs.push(message);
-      return;
-    }
     self.postMessage(message);
-    while (pendingLogs.length > 0) {
-      self.postMessage(pendingLogs.shift());
-    }
-    lastSent = now;
   };
+
+  // Restore dialog functions
+  function nextId() {
+    return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+  }
+
+  function makeDialog(kind) {
+    return (msg = '', def = '') => new Promise(resolve => {
+      const requestId = nextId();
+      self.postMessage({ type: 'dialog', payload: { kind, message: String(msg), defaultValue: def, requestId } });
+      function handler(e) {
+        if (e.data?.type === 'dialogResult' && e.data.payload.requestId === requestId) {
+          self.removeEventListener('message', handler);
+          resolve(e.data.payload.result);
+        }
+      }
+      self.addEventListener('message', handler);
+    });
+  }
+
+  self.alert   = makeDialog('alert');
+  self.prompt  = makeDialog('prompt');
+  self.confirm = makeDialog('confirm');
 
   self.console = {
     log: (...args) => send('log', args),
@@ -78,44 +96,60 @@
       send('table', [], { tableMeta: { columns, rows, truncated } });
     },
     clear: () => send('clear', []),
+
+    // Lesson 7: New console methods
+    debug: (...args) => send('debug', args),
+
+    count: (label = 'default') => {
+      if (counts.size > 1000 && !counts.has(label)) return; // Cap new counters
+      const val = (counts.get(label) || 0) + 1;
+      counts.set(label, val);
+      send('count', [], { label, value: val });
+    },
+
+    countReset: (label = 'default') => {
+      counts.set(label, 0);
+      send('count', [], { label, value: 0 });
+    },
+
+    time: (label = 'default') => {
+      if (times.size > 1000) return; // Cap at 1000 timers
+      times.set(label, performance.now());
+    },
+
+    timeLog: (label = 'default', ...args) => {
+      const start = times.get(label);
+      if (start === undefined) return;
+      const elapsed = performance.now() - start;
+      send('timeLog', [], { label, elapsed, extra: args.map(String) });
+    },
+
+    timeEnd: (label = 'default', ...args) => {
+      const start = times.get(label);
+      if (start === undefined) return;
+      const elapsed = performance.now() - start;
+      times.delete(label);
+      send('timeEnd', [], { label, elapsed, extra: args.map(String) });
+    },
+
+    group: (label) => {
+      if (depth >= 50) return; // Cap at 50 levels
+      send('group', [], { label });
+      depth++;
+    },
+
+    groupCollapsed: (label) => {
+      if (depth >= 50) return;
+      send('groupCollapsed', [], { label });
+      depth++;
+    },
+
+    groupEnd: () => {
+      if (depth === 0) return;
+      depth--;
+      send('groupEnd', [], {});
+    },
   };
-
-  // Timer wrappers (unchanged)
-  (() => {
-    let nextId = 1;
-    const callbacks = new Map();
-
-    function schedule(kind) {
-      return (fn, delay = 0, ...args) => {
-        if (typeof fn !== 'function') throw new TypeError('Callback must be a function');
-        const id = nextId++;
-        callbacks.set(id, { fn, args, kind });
-        self.postMessage({ type: 'timerSet', payload: { id, kind, delay } });
-        return id;
-      };
-    }
-
-    function clear(id) {
-      if (!callbacks.has(id)) return;
-      callbacks.delete(id);
-      self.postMessage({ type: 'timerClear', payload: { id } });
-    }
-
-    self.setTimeout    = schedule('timeout');
-    self.setInterval   = schedule('interval');
-    self.clearTimeout  = clear;
-    self.clearInterval = clear;
-
-    self.addEventListener('message', (e) => {
-      if (e.data?.type === 'timerFire') {
-        const { id } = e.data.payload;
-        const meta = callbacks.get(id);
-        if (!meta) return;
-        try { meta.fn(...meta.args); } catch (err) { console.error(err); }
-        if (meta.kind === 'timeout') callbacks.delete(id);
-      }
-    });
-  })();
 
   self.onmessage = (event) => {
     if (event.data.type === 'run') {
@@ -134,36 +168,6 @@
       self.postMessage(event.data);
     }
   };
-
-  function nextId() {
-    if (self.crypto && typeof self.crypto.randomUUID === 'function') {
-      return self.crypto.randomUUID();
-    } else {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-    }
-  }
-
-  function makeDialog(kind) {
-    return (msg = '', def = '') => new Promise(resolve => {
-      const requestId = nextId();
-      self.postMessage({ type: 'dialog', payload: { kind, message: String(msg), defaultValue: def, requestId } });
-      function handler(e) {
-        if (e.data?.type === 'dialogResult' && e.data.payload.requestId === requestId) {
-          self.removeEventListener('message', handler);
-          resolve(e.data.payload.result);
-        }
-      }
-      self.addEventListener('message', handler);
-    });
-  }
-
-  self.alert   = makeDialog('alert');
-  self.prompt  = makeDialog('prompt');
-  self.confirm = makeDialog('confirm');
     `;
 
     const blob = new Blob([workerScript], { type: 'application/javascript' });
