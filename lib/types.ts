@@ -1,3 +1,4 @@
+// lib/types.ts
 export type DialogKind = 'alert' | 'prompt' | 'confirm';
 
 export interface DialogRequest {
@@ -18,9 +19,9 @@ export type TimerKind = 'timeout' | 'interval';
 export interface TimerSet {
   type: 'timerSet';
   payload: {
-    id: number;          // issued by the worker
+    id: number;
     kind: TimerKind;
-    delay: number;       // ≥ 0 ms
+    delay: number;
   };
 }
 
@@ -32,4 +33,33 @@ export interface TimerClear {
 export interface TimerFire {
   type: 'timerFire';
   payload: { id: number };
+}
+
+// New log types for Lesson 6
+export type LogLevel =
+  | 'log'
+  | 'info'
+  | 'warn'
+  | 'error'
+  | 'trace'
+  | 'assert'
+  | 'dir'
+  | 'table'
+  | 'clear';
+
+export interface TableMeta {
+  columns: string[];
+  rows: unknown[][];
+  caption?: string;
+  truncated: boolean;
+}
+
+export interface LogMessage {
+  type: 'log';
+  payload: {
+    level: LogLevel;
+    args: unknown[];
+    stack?: string;
+    tableMeta?: TableMeta;
+  };
 }

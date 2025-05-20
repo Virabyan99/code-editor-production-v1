@@ -9,135 +9,161 @@
   <script>
     const workerScript = `
       const THROTTLE_MS = 16;
-      let lastSent = 0;
-      let pendingLogs = [];
+  let lastSent = 0;
+  let pendingLogs = [];
+  const MAX_LEN = 2000;  // chars per serialized item
+  const MAX_ROWS = 1000;
 
-      function safeSerialize(arg) {
-        if (arg === null || typeof arg !== 'object') return String(arg);
-        try {
-          return JSON.stringify(arg, (_key, value) =>
-            typeof value === 'function' ? '[fn]' : value
-          );
-        } catch {
-          return '[unserialisable]';
+  const safeStringify = (obj) => {
+    try {
+      return JSON.stringify(obj).slice(0, MAX_LEN);
+    } catch {
+      return '[Circular]';
+    }
+  };
+
+  const send = (level, args, extra = {}) => {
+    const message = {
+      type: 'log',
+      payload: {
+        level,
+        args: args.map(safeStringify),
+        ...extra,
+      },
+    };
+    const now = performance.now();
+    if (now - lastSent < THROTTLE_MS) {
+      pendingLogs.push(message);
+      return;
+    }
+    self.postMessage(message);
+    while (pendingLogs.length > 0) {
+      self.postMessage(pendingLogs.shift());
+    }
+    lastSent = now;
+  };
+
+  self.console = {
+    log: (...args) => send('log', args),
+    info: (...args) => send('info', args),
+    warn: (...args) => send('warn', args),
+    error: (...args) => send('error', args),
+    trace: (...args) => {
+      const stack = (new Error()).stack?.split('\\n').slice(1).join('\\n');
+      send('trace', args, { stack });
+    },
+    assert: (cond, ...args) => {
+      if (cond) return;
+      const stack = (new Error()).stack?.split('\\n').slice(1).join('\\n');
+      send('assert', args.length ? args : ['Assertion failed'], { stack });
+    },
+    dir: (obj, opts) => {
+      const rep = safeStringify(obj);
+      send('dir', [rep, opts]);
+    },
+    table: (tabular, props) => {
+      let rows = [];
+      let columns = [];
+      try {
+        if (Array.isArray(tabular)) {
+          rows = tabular.map(r => props ? props.map(p => r[p]) : Object.values(r));
+          columns = props ?? Object.keys(tabular[0] ?? {});
+        } else if (typeof tabular === 'object') {
+          columns = props ?? Object.keys(tabular);
+          rows = Object.entries(tabular).map(([k, v]) => [k, ...(Array.isArray(v) ? v : [v])]);
         }
+      } catch {}
+      const truncated = rows.length > MAX_ROWS;
+      if (truncated) rows = rows.slice(0, MAX_ROWS);
+      send('table', [], { tableMeta: { columns, rows, truncated } });
+    },
+    clear: () => send('clear', []),
+  };
+
+  // Timer wrappers (unchanged)
+  (() => {
+    let nextId = 1;
+    const callbacks = new Map();
+
+    function schedule(kind) {
+      return (fn, delay = 0, ...args) => {
+        if (typeof fn !== 'function') throw new TypeError('Callback must be a function');
+        const id = nextId++;
+        callbacks.set(id, { fn, args, kind });
+        self.postMessage({ type: 'timerSet', payload: { id, kind, delay } });
+        return id;
+      };
+    }
+
+    function clear(id) {
+      if (!callbacks.has(id)) return;
+      callbacks.delete(id);
+      self.postMessage({ type: 'timerClear', payload: { id } });
+    }
+
+    self.setTimeout    = schedule('timeout');
+    self.setInterval   = schedule('interval');
+    self.clearTimeout  = clear;
+    self.clearInterval = clear;
+
+    self.addEventListener('message', (e) => {
+      if (e.data?.type === 'timerFire') {
+        const { id } = e.data.payload;
+        const meta = callbacks.get(id);
+        if (!meta) return;
+        try { meta.fn(...meta.args); } catch (err) { console.error(err); }
+        if (meta.kind === 'timeout') callbacks.delete(id);
       }
+    });
+  })();
 
-      function postLog(message) {
-        const now = performance.now();
-        if (now - lastSent < THROTTLE_MS) {
-          pendingLogs.push(message); // Queue the log instead of dropping it
-          return;
-        }
-        // Send current message and any pending ones
-        self.postMessage({ type: 'log', payload: message });
+  self.onmessage = (event) => {
+    if (event.data.type === 'run') {
+      try {
+        const func = new Function(event.data.code);
+        func();
         while (pendingLogs.length > 0) {
-          self.postMessage({ type: 'log', payload: pendingLogs.shift() });
+          self.postMessage(pendingLogs.shift());
         }
-        lastSent = now;
+        self.postMessage({ type: 'done' });
+      } catch (error) {
+        self.console.error(error.message);
+        self.postMessage({ type: 'done' });
       }
+    } else if (event.data.type === 'dialogResult') {
+      self.postMessage(event.data);
+    }
+  };
 
-      self.console = {
-        log: (...args) => {
-          const serializedArgs = args.map(a => safeSerialize(a)).join(' ');
-          postLog(serializedArgs);
-        },
-        warn: (...args) => {
-          const serializedArgs = args.map(a => safeSerialize(a)).join(' ');
-          self.postMessage({ type: 'warn', data: serializedArgs });
-        },
-        error: (...args) => {
-          const serializedArgs = args.map(a => safeSerialize(a)).join(' ');
-          self.postMessage({ type: 'error', data: serializedArgs });
-        },
-        clear: () => self.postMessage({ type: 'clear' }),
-      };
+  function nextId() {
+    if (self.crypto && typeof self.crypto.randomUUID === 'function') {
+      return self.crypto.randomUUID();
+    } else {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+  }
 
-      // Timer wrappers
-      (() => {
-        let nextId = 1;
-        const callbacks = new Map();   // id → {fn, args, kind}
-
-        function schedule(kind) {
-          return (fn, delay = 0, ...args) => {
-            if (typeof fn !== 'function') throw new TypeError('Callback must be a function');
-            const id = nextId++;
-            callbacks.set(id, { fn, args, kind });
-            self.postMessage({ type: 'timerSet', payload: { id, kind, delay } });
-            return id;
-          };
-        }
-
-        function clear(id) {
-          if (!callbacks.has(id)) return;
-          callbacks.delete(id);
-          self.postMessage({ type: 'timerClear', payload: { id } });
-        }
-
-        self.setTimeout    = schedule('timeout');
-        self.setInterval   = schedule('interval');
-        self.clearTimeout  = clear;
-        self.clearInterval = clear;
-
-        self.addEventListener('message', (e) => {
-          if (e.data?.type === 'timerFire') {
-            const { id } = e.data.payload;
-            const meta = callbacks.get(id);
-            if (!meta) return;
-            try { meta.fn(...meta.args); } catch (err) { console.error(err); }
-            if (meta.kind === 'timeout') callbacks.delete(id);
-          }
-        });
-      })();
-
-      self.onmessage = (event) => {
-        if (event.data.type === 'run') {
-          try {
-            const func = new Function(event.data.code);
-            func();
-            // Flush pending logs after synchronous execution
-            while (pendingLogs.length > 0) {
-              self.postMessage({ type: 'log', payload: pendingLogs.shift() });
-            }
-            self.postMessage({ type: 'done' });
-          } catch (error) {
-            self.console.error(error.message);
-            self.postMessage({ type: 'done' });
-          }
-        } else if (event.data.type === 'dialogResult') {
-          self.postMessage(event.data);
-        }
-      };
-
-      function nextId() {
-        if (self.crypto && typeof self.crypto.randomUUID === 'function') {
-          return self.crypto.randomUUID();
-        } else {
-          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-          });
+  function makeDialog(kind) {
+    return (msg = '', def = '') => new Promise(resolve => {
+      const requestId = nextId();
+      self.postMessage({ type: 'dialog', payload: { kind, message: String(msg), defaultValue: def, requestId } });
+      function handler(e) {
+        if (e.data?.type === 'dialogResult' && e.data.payload.requestId === requestId) {
+          self.removeEventListener('message', handler);
+          resolve(e.data.payload.result);
         }
       }
+      self.addEventListener('message', handler);
+    });
+  }
 
-      function makeDialog(kind) {
-        return (msg = '', def = '') => new Promise(resolve => {
-          const requestId = nextId();
-          self.postMessage({ type: 'dialog', payload: { kind, message: String(msg), defaultValue: def, requestId } });
-          function handler(e) {
-            if (e.data?.type === 'dialogResult' && e.data.payload.requestId === requestId) {
-              self.removeEventListener('message', handler);
-              resolve(e.data.payload.result);
-            }
-          }
-          self.addEventListener('message', handler);
-        });
-      }
-
-      self.alert   = makeDialog('alert');
-      self.prompt  = makeDialog('prompt');
-      self.confirm = makeDialog('confirm');
+  self.alert   = makeDialog('alert');
+  self.prompt  = makeDialog('prompt');
+  self.confirm = makeDialog('confirm');
     `;
 
     const blob = new Blob([workerScript], { type: 'application/javascript' });
