@@ -10,6 +10,7 @@
     const workerScript = `
       const THROTTLE_MS = 16;
       let lastSent = 0;
+      let pendingLogs = [];
 
       function safeSerialize(arg) {
         if (arg === null || typeof arg !== 'object') return String(arg);
@@ -24,9 +25,16 @@
 
       function postLog(message) {
         const now = performance.now();
-        if (now - lastSent < THROTTLE_MS) return;
-        lastSent = now;
+        if (now - lastSent < THROTTLE_MS) {
+          pendingLogs.push(message); // Queue the log instead of dropping it
+          return;
+        }
+        // Send current message and any pending ones
         self.postMessage({ type: 'log', payload: message });
+        while (pendingLogs.length > 0) {
+          self.postMessage({ type: 'log', payload: pendingLogs.shift() });
+        }
+        lastSent = now;
       }
 
       self.console = {
@@ -45,18 +53,59 @@
         clear: () => self.postMessage({ type: 'clear' }),
       };
 
+      // Timer wrappers
+      (() => {
+        let nextId = 1;
+        const callbacks = new Map();   // id → {fn, args, kind}
+
+        function schedule(kind) {
+          return (fn, delay = 0, ...args) => {
+            if (typeof fn !== 'function') throw new TypeError('Callback must be a function');
+            const id = nextId++;
+            callbacks.set(id, { fn, args, kind });
+            self.postMessage({ type: 'timerSet', payload: { id, kind, delay } });
+            return id;
+          };
+        }
+
+        function clear(id) {
+          if (!callbacks.has(id)) return;
+          callbacks.delete(id);
+          self.postMessage({ type: 'timerClear', payload: { id } });
+        }
+
+        self.setTimeout    = schedule('timeout');
+        self.setInterval   = schedule('interval');
+        self.clearTimeout  = clear;
+        self.clearInterval = clear;
+
+        self.addEventListener('message', (e) => {
+          if (e.data?.type === 'timerFire') {
+            const { id } = e.data.payload;
+            const meta = callbacks.get(id);
+            if (!meta) return;
+            try { meta.fn(...meta.args); } catch (err) { console.error(err); }
+            if (meta.kind === 'timeout') callbacks.delete(id);
+          }
+        });
+      })();
+
       self.onmessage = (event) => {
         if (event.data.type === 'run') {
           try {
             const func = new Function(event.data.code);
             func();
+            // Flush pending logs after synchronous execution
+            while (pendingLogs.length > 0) {
+              self.postMessage({ type: 'log', payload: pendingLogs.shift() });
+            }
             self.postMessage({ type: 'done' });
           } catch (error) {
             self.console.error(error.message);
             self.postMessage({ type: 'done' });
           }
         } else if (event.data.type === 'dialogResult') {
-          self.postMessage(event.data); // Forward to dialog resolver
+          self.postMessage(event.data);
         }
       };
 
@@ -95,15 +144,18 @@
     const worker = new Worker(URL.createObjectURL(blob));
 
     window.addEventListener('message', (event) => {
-      if (event.data.type === 'run') {
-        worker.postMessage(event.data);
-      } else if (event.data.type === 'dialogResult') {
+      if (event.data.type === 'run' || event.data.type === 'dialogResult' || event.data.type === 'timerFire') {
         worker.postMessage(event.data);
       }
     });
 
     worker.onmessage = (event) => {
-      window.parent.postMessage(event.data, '*');
+      const { type } = event.data;
+      if (type === 'timerSet' || type === 'timerClear') {
+        window.parent.postMessage(event.data, '*');
+      } else {
+        window.parent.postMessage(event.data, '*');
+      }
     };
 
     worker.onerror = (error) => {

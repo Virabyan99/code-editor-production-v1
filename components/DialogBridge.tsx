@@ -9,7 +9,6 @@ export default function DialogBridge() {
 
   useEffect(() => {
     function onMessage(e: MessageEvent) {
-      console.log('DialogBridge received:', e.data)
       if (e.data?.type === 'dialog') {
         push(e.data.payload)
       }

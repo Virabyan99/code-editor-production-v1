@@ -3,6 +3,7 @@ import ConsolePane from '@/components/ConsolePane';
 import EditorPane from '@/components/EditorPane';
 import Toolbar from '@/components/Toolbar';
 import DialogBridge from '@/components/DialogBridge';
+import TimerBridge from '@/components/TimerBridge';
 import { DialogHost } from '@/components/DialogHost';
 
 const HomePage = () => {
@@ -14,6 +15,7 @@ const HomePage = () => {
         <ConsolePane />
       </main>
       <DialogBridge />
+      <TimerBridge />
       <DialogHost />
     </div>
   );

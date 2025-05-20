@@ -30,7 +30,6 @@ export function DialogHost() {
     if (!current && queueLength > 0) {
       const next = shift();
       if (next) {
-        console.log('DialogHost dequeued:', next);
         setCurrent(next);
       }
     }
