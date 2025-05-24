@@ -1,4 +1,3 @@
-// lib/types.ts
 export type DialogKind = 'alert' | 'prompt' | 'confirm';
 
 export interface DialogRequest {
@@ -73,5 +72,27 @@ export interface LogMessage {
     elapsed?: number;    // For timeLog, timeEnd
     extra?: string[];    // For timeLog, timeEnd
     depth?: number;      // For all messages, especially groups
+    objectId?: number;   // For dir
+    snapshot?: ObjSnapshot; // For dir
   };
+}
+
+// Lesson 8: Object Explorer types
+export interface ObjSnapshot {
+  type: string;
+  preview: string;
+  keys?: string[];
+  length?: number;
+  value?: string | number | boolean | null;
+  id?: number | null; // Add id to track object identity
+}
+
+export interface ObjExpandReq {
+  type: 'objExpand';
+  payload: { objectId: number; path: (string | number)[] };
+}
+
+export interface ObjExpandRes {
+  type: 'objExpandRes';
+  payload: { objectId: number; path: (string | number)[]; snapshot: ObjSnapshot };
 }

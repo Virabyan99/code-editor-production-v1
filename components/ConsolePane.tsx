@@ -1,5 +1,6 @@
 'use client';
 import { useConsoleStore } from '@/lib/consoleStore';
+import { TreeNode } from './TreeNode';
 
 export default function ConsolePane() {
   const logs = useConsoleStore((s) => s.entries);
@@ -24,7 +25,7 @@ export default function ConsolePane() {
   };
 
   return (
-    <div className="h-[91vh] w-full overflow-y-auto bg-background dark:bg-stone-800 border-l border-border shadow-sm">
+    <div className="h-[91vh] w-full overflow-y-auto bg-background  border-l border-border shadow-sm">
       <div className="h-full overflow-y-auto text-foreground console-scroller p-2 text-[13px] leading-[1.4em]">
         {logs.map((log) => (
           <div
@@ -32,7 +33,14 @@ export default function ConsolePane() {
             className={`m-0 whitespace-pre-wrap ${getLogColor(log.level)}`}
             style={{ marginLeft: `${log.depth}rem` }}
           >
-            {log.level === 'count' ? (
+            {log.level === 'dir' && log.snapshot ? (
+              <TreeNode
+                nodeId={log.objectId!}
+                path={[]}
+                snapshot={log.snapshot}
+                ancestorIds={new Set([log.objectId!])} // Initialize with root objectId
+              />
+            ) : log.level === 'count' ? (
               `${log.label || 'default'}: ${log.value}`
             ) : log.level === 'timeLog' || log.level === 'timeEnd' ? (
               `${log.label || 'default'}: ${log.elapsed?.toFixed(2)} ms${

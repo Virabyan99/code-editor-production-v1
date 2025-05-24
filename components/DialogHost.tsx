@@ -25,12 +25,16 @@ export function DialogHost() {
   const [current, setCurrent] = useState<DialogRequest | null>(null);
   const shift = useDialogStore((s) => s.shift);
   const queueLength = useDialogStore((s) => s.queue.length);
+  const [promptValue, setPromptValue] = useState(''); // Added for controlled input
 
   useEffect(() => {
     if (!current && queueLength > 0) {
       const next = shift();
       if (next) {
         setCurrent(next);
+        if (next.kind === 'prompt') {
+          setPromptValue(next.defaultValue ?? ''); // Initialize prompt value
+        }
       }
     }
   }, [current, shift, queueLength]);
@@ -79,17 +83,14 @@ export function DialogHost() {
           <DialogContent>
             <DialogTitle>Input Required</DialogTitle>
             <DialogDescription>{current.message}</DialogDescription>
-            <Input id="prompt" defaultValue={current.defaultValue ?? ''} />
+            <Input
+              id="prompt"
+              value={promptValue}
+              onChange={(e) => setPromptValue(e.target.value)} // Controlled input
+            />
             <DialogFooter>
               <Button onClick={() => resolve(null)}>Cancel</Button>
-              <Button
-                onClick={() => {
-                  const val = (document.getElementById('prompt') as HTMLInputElement).value;
-                  resolve(val);
-                }}
-              >
-                OK
-              </Button>
+              <Button onClick={() => resolve(promptValue)}>OK</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
