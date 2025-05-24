@@ -25,7 +25,7 @@ export default function ConsolePane() {
   };
 
   return (
-    <div className="h-[91vh] w-full overflow-y-auto bg-background  border-l border-border shadow-sm">
+    <div className="h-[91vh] w-full overflow-y-auto bg-background border-l border-border shadow-sm">
       <div className="h-full overflow-y-auto text-foreground console-scroller p-2 text-[13px] leading-[1.4em]">
         {logs.map((log) => (
           <div
@@ -38,7 +38,7 @@ export default function ConsolePane() {
                 nodeId={log.objectId!}
                 path={[]}
                 snapshot={log.snapshot}
-                ancestorIds={new Set([log.objectId!])} // Initialize with root objectId
+                ancestorIds={new Set([log.objectId!])}
               />
             ) : log.level === 'count' ? (
               `${log.label || 'default'}: ${log.value}`
@@ -48,7 +48,29 @@ export default function ConsolePane() {
               }`
             ) : log.level === 'group' || log.level === 'groupCollapsed' ? (
               `${log.label || 'Group'}`
-            ) : log.level === 'groupEnd' ? null : (
+            ) : log.level === 'groupEnd' ? null : log.level === 'table' && log.tableMeta ? (
+              <div className="table-container">
+                <table className="min-w-full border-collapse border border-border">
+                  <thead>
+                    <tr>
+                      {log.tableMeta.columns.map((col, idx) => (
+                        <th key={idx} className="border border-border px-2 py-1 text-left">{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {log.tableMeta.rows.map((row, rowIdx) => (
+                      <tr key={rowIdx}>
+                        {row.map((cell, cellIdx) => (
+                          <td key={cellIdx} className="border border-border px-2 py-1">{String(cell)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {log.tableMeta.truncated && <p className="text-muted-foreground">... (truncated)</p>}
+              </div>
+            ) : (
               <>
                 {log.args?.join(' ')}
                 {log.stack && (
@@ -57,7 +79,6 @@ export default function ConsolePane() {
                     <pre>{log.stack}</pre>
                   </details>
                 )}
-                {log.tableMeta && <p>[Table: {log.tableMeta.columns.join(', ')}]</p>}
               </>
             )}
           </div>

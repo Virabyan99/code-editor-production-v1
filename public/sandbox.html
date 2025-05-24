@@ -68,25 +68,25 @@
       }
 
       function makeDialog(kind) {
-  return (msg = '', def = '') => new Promise((resolve, reject) => {
-    const requestId = generateRequestId();
-    self.postMessage({ type: 'dialog', payload: { kind, message: String(msg), defaultValue: def, requestId } });
-    
-    const timeoutId = setTimeout(() => {
-      reject(new Error('Dialog timed out'));
-      self.removeEventListener('message', handler);
-    }, 30000); // 30 seconds timeout
+        return (msg = '', def = '') => new Promise((resolve, reject) => {
+          const requestId = generateRequestId();
+          self.postMessage({ type: 'dialog', payload: { kind, message: String(msg), defaultValue: def, requestId } });
+          
+          const timeoutId = setTimeout(() => {
+            reject(new Error('Dialog timed out'));
+            self.removeEventListener('message', handler);
+          }, 30000); // 30 seconds timeout
 
-    function handler(e) {
-      if (e.data?.type === 'dialogResult' && e.data.payload.requestId === requestId) {
-        clearTimeout(timeoutId);
-        self.removeEventListener('message', handler);
-        resolve(e.data.payload.result);
+          function handler(e) {
+            if (e.data?.type === 'dialogResult' && e.data.payload.requestId === requestId) {
+              clearTimeout(timeoutId);
+              self.removeEventListener('message', handler);
+              resolve(e.data.payload.result);
+            }
+          }
+          self.addEventListener('message', handler);
+        });
       }
-    }
-    self.addEventListener('message', handler);
-  });
-}
 
       self.alert   = makeDialog('alert');
       self.prompt  = makeDialog('prompt');
@@ -120,11 +120,18 @@
           let columns = [];
           try {
             if (Array.isArray(tabular)) {
-              rows = tabular.map(r => props ? props.map(p => r[p]) : Object.values(r));
               columns = props ?? Object.keys(tabular[0] ?? {});
+              rows = tabular.map(r => columns.map(col => r[col]));
             } else if (typeof tabular === 'object') {
-              columns = props ?? Object.keys(tabular);
-              rows = Object.entries(tabular).map(([k, v]) => [k, ...(Array.isArray(v) ? v : [v])]);
+              const keys = Object.keys(tabular);
+              if (props) {
+                columns = ['(index)', ...props];
+                rows = keys.map(k => [k, ...props.map(p => tabular[k][p])]);
+              } else {
+                const firstKey = keys[0];
+                columns = ['(index)', ...(firstKey ? Object.keys(tabular[firstKey]) : [])];
+                rows = keys.map(k => [k, ...columns.slice(1).map(col => tabular[k][col])]);
+              }
             }
           } catch {}
           const truncated = rows.length > MAX_ROWS;
