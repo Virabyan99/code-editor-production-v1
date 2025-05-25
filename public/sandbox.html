@@ -24,6 +24,9 @@
       const KEYS_LIMIT = 50;
       let nextId = 1;
 
+      // Dialog state
+      const pendingDialogs = new Map();
+
       const safeStringify = (obj) => {
         try {
           return JSON.stringify(obj).slice(0, MAX_LEN);
@@ -67,30 +70,30 @@
         return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
       }
 
-      function makeDialog(kind) {
-        return (msg = '', def = '') => new Promise((resolve, reject) => {
-          const requestId = generateRequestId();
-          self.postMessage({ type: 'dialog', payload: { kind, message: String(msg), defaultValue: def, requestId } });
-          
-          const timeoutId = setTimeout(() => {
-            reject(new Error('Dialog timed out'));
-            self.removeEventListener('message', handler);
-          }, 30000); // 30 seconds timeout
-
-          function handler(e) {
-            if (e.data?.type === 'dialogResult' && e.data.payload.requestId === requestId) {
-              clearTimeout(timeoutId);
-              self.removeEventListener('message', handler);
-              resolve(e.data.payload.result);
-            }
-          }
-          self.addEventListener('message', handler);
+      // Dialog polyfills
+      self.prompt = (msg = '', defVal = '') => {
+        const id = generateRequestId();
+        return new Promise((resolve) => {
+          pendingDialogs.set(id, resolve);
+          self.postMessage({ type: 'dialog', payload: { kind: 'prompt', message: String(msg), defaultValue: defVal, requestId: id } });
         });
-      }
+      };
 
-      self.alert   = makeDialog('alert');
-      self.prompt  = makeDialog('prompt');
-      self.confirm = makeDialog('confirm');
+      self.alert = (msg = '') => {
+        const id = generateRequestId();
+        return new Promise((resolve) => {
+          pendingDialogs.set(id, resolve);
+          self.postMessage({ type: 'dialog', payload: { kind: 'alert', message: String(msg), requestId: id } });
+        });
+      };
+
+      self.confirm = (msg = '') => {
+        const id = generateRequestId();
+        return new Promise((resolve) => {
+          pendingDialogs.set(id, resolve);
+          self.postMessage({ type: 'dialog', payload: { kind: 'confirm', message: String(msg), requestId: id } });
+        });
+      };
 
       self.console = {
         log: (...args) => send('log', args),
@@ -185,9 +188,20 @@
       };
 
       self.addEventListener('message', (e) => {
-        if (e.data.type === 'run') {
+        const { type, payload, code } = e.data;
+
+        if (type === 'dialogResult') {
+          const resolve = pendingDialogs.get(payload.requestId);
+          if (resolve) {
+            pendingDialogs.delete(payload.requestId);
+            resolve(payload.result);
+          }
+          return;
+        }
+
+        if (type === 'run') {
           try {
-            const func = new Function(e.data.code);
+            const func = new Function(code);
             func();
             while (pendingLogs.length > 0) {
               self.postMessage(pendingLogs.shift());
@@ -197,12 +211,10 @@
             self.console.error(error.message);
             self.postMessage({ type: 'done' });
           }
-        } else if (e.data.type === 'dialogResult') {
+        } else if (type === 'timerFire') {
           self.postMessage(e.data);
-        } else if (e.data.type === 'timerFire') {
-          self.postMessage(e.data);
-        } else if (e.data?.type === 'objExpand') {
-          const { objectId, path } = e.data.payload;
+        } else if (type === 'objExpand') {
+          const { objectId, path } = payload;
           let target = store.get(objectId);
           if (!target) return;
           for (const key of path) {

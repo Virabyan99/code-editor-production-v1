@@ -1,6 +1,7 @@
 // lib/useCodeRunner.ts
 import { useCallback, useEffect, useRef } from 'react';
 import { useEditorStore } from '@/lib/store';
+import { transformPrompt } from '@/lib/transformPrompt';
 
 export function useCodeRunner() {
   const { code } = useEditorStore();
@@ -16,16 +17,14 @@ export function useCodeRunner() {
     iframeRef.current = iframe;
 
     return () => {
-      if (iframeRef.current) {
-        document.body.removeChild(iframeRef.current);
-      }
+      if (iframeRef.current) document.body.removeChild(iframeRef.current);
     };
   }, []);
 
   const run = useCallback(() => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type: 'run', code }, '*');
-    }
+    if (!iframeRef.current?.contentWindow) return;
+    const transformed = transformPrompt(code);
+    iframeRef.current.contentWindow.postMessage({ type: 'run', code: transformed }, '*');
   }, [code]);
 
   return { run };
