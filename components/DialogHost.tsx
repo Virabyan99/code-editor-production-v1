@@ -72,7 +72,7 @@ export function DialogHost() {
             <DialogDescription>{current.message}</DialogDescription>
             <DialogFooter>
               <Button onClick={() => resolve(false)}>Cancel</Button>
-              <Button onClick={() => resolve(true)}>OK</Button>
+              <Button onClick={() => resolve(true)}>Confirm</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -90,7 +90,7 @@ export function DialogHost() {
             />
             <DialogFooter>
               <Button onClick={() => resolve(null)}>Cancel</Button>
-              <Button onClick={() => resolve(promptValue)}>OK</Button>
+              <Button onClick={() => resolve(promptValue)}>Confirm</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
