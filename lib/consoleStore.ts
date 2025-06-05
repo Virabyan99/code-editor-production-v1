@@ -1,23 +1,42 @@
-// lib/consoleStore.ts
 import { create } from 'zustand';
+import type { ObjSnapshot } from '@/lib/types';
 
-interface Entry {
+interface BaseEntry {
   id: number;
   ts: number;
+  kind: string;
+}
+
+interface LogEntry extends BaseEntry {
+  kind: 'log';
   level: string;
-  depth: number;        // Required for indentation
-  args?: string[];      // For log, debug, etc.
-  stack?: string;       // For trace, assert
+  depth: number;
+  args?: string[];
+  stack?: string;
   tableMeta?: {
     columns: string[];
     rows: unknown[][];
     truncated: boolean;
   };
-  label?: string;       // For count, timers, groups
-  value?: number;       // For count
-  elapsed?: number;     // For timeLog, timeEnd
-  extra?: string[];     // For timeLog, timeEnd
+  label?: string;
+  value?: number;
+  elapsed?: number;
+  extra?: string[];
+  objectId?: number;
+  snapshot?: ObjSnapshot;
 }
+
+interface ResultEntry extends BaseEntry {
+  kind: 'result';
+  value: unknown;
+}
+
+interface ErrorEntry extends BaseEntry {
+  kind: 'error';
+  message: string;
+}
+
+type Entry = LogEntry | ResultEntry | ErrorEntry;
 
 interface ConsoleState {
   entries: Entry[];

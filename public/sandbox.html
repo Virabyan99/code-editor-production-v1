@@ -202,13 +202,16 @@
         if (type === 'run') {
           try {
             const func = new Function(code);
-            func();
+            const result = func();
             while (pendingLogs.length > 0) {
               self.postMessage(pendingLogs.shift());
             }
+            if (result !== undefined) {
+              self.postMessage({ type: 'result', payload: result });
+            }
             self.postMessage({ type: 'done' });
           } catch (error) {
-            self.console.error(error.message);
+            self.postMessage({ type: 'error', payload: error.message });
             self.postMessage({ type: 'done' });
           }
         } else if (type === 'timerFire') {

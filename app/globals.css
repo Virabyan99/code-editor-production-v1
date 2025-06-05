@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -158,7 +158,7 @@ body {
 }
 
 .cm-content {
-    font-family: var(--font-fira-code), monospace !important;
+  font-family: var(--font-fira-code), monospace !important;
 }
 
 .cm-gutters {
@@ -229,4 +229,3 @@ body {
     @apply bg-background text-foreground;
   }
 }
-

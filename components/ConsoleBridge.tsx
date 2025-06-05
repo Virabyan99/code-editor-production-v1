@@ -19,8 +19,23 @@ export default function ConsoleBridge() {
         push({
           id: nextId.current++,
           ts: Date.now(),
+          kind: 'log',
           level,
           ...payload,
+        });
+      } else if (e.data?.type === 'result') {
+        push({
+          id: nextId.current++,
+          ts: Date.now(),
+          kind: 'result',
+          value: e.data.payload,
+        });
+      } else if (e.data?.type === 'error') {
+        push({
+          id: nextId.current++,
+          ts: Date.now(),
+          kind: 'error',
+          message: e.data.payload,
         });
       } else if (e.data?.type === 'objExpandRes') {
         const { objectId, path, snapshot } = e.data.payload;

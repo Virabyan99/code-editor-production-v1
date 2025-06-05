@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useEditorStore } from '@/lib/store';
 import { transformPrompt } from '@/lib/transformPrompt';
+import { transformForEvaluation } from './transformForEvaluation';
 
 export function useCodeRunner() {
   const { code } = useEditorStore();
@@ -23,7 +24,8 @@ export function useCodeRunner() {
 
   const run = useCallback(() => {
     if (!iframeRef.current?.contentWindow) return;
-    const transformed = transformPrompt(code);
+    let transformed = transformPrompt(code);
+    transformed = transformForEvaluation(transformed);
     iframeRef.current.contentWindow.postMessage({ type: 'run', code: transformed }, '*');
   }, [code]);
 

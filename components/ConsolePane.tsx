@@ -1,6 +1,7 @@
 'use client';
 import { useConsoleStore } from '@/lib/consoleStore';
 import { TreeNode } from './TreeNode';
+import { ObjectInspector } from './ObjectInspector';
 
 export default function ConsolePane() {
   const logs = useConsoleStore((s) => s.entries);
@@ -27,62 +28,81 @@ export default function ConsolePane() {
   return (
     <div className="h-[91vh] w-full overflow-y-auto bg-background border-l border-border shadow-sm">
       <div className="h-full overflow-y-auto text-foreground console-scroller p-2 text-[13px] leading-[1.4em]">
-        {logs.map((log) => (
-          <div
-            key={log.id}
-            className={`m-0 whitespace-pre-wrap ${getLogColor(log.level)}`}
-            style={{ marginLeft: `${log.depth}rem` }}
-          >
-            {log.level === 'dir' && log.snapshot ? (
-              <TreeNode
-                nodeId={log.objectId!}
-                path={[]}
-                snapshot={log.snapshot}
-                ancestorIds={new Set([log.objectId!])}
-              />
-            ) : log.level === 'count' ? (
-              `${log.label || 'default'}: ${log.value}`
-            ) : log.level === 'timeLog' || log.level === 'timeEnd' ? (
-              `${log.label || 'default'}: ${log.elapsed?.toFixed(2)} ms${
-                log.extra?.length ? ` - ${log.extra.join(' ')}` : ''
-              }`
-            ) : log.level === 'group' || log.level === 'groupCollapsed' ? (
-              `${log.label || 'Group'}`
-            ) : log.level === 'groupEnd' ? null : log.level === 'table' && log.tableMeta ? (
-              <div className="table-container">
-                <table className="min-w-full border-collapse border border-border">
-                  <thead>
-                    <tr>
-                      {log.tableMeta.columns.map((col, idx) => (
-                        <th key={idx} className="border border-border px-2 py-1 text-left">{col}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {log.tableMeta.rows.map((row, rowIdx) => (
-                      <tr key={rowIdx}>
-                        {row.map((cell, cellIdx) => (
-                          <td key={cellIdx} className="border border-border px-2 py-1">{String(cell)}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {log.tableMeta.truncated && <p className="text-muted-foreground">... (truncated)</p>}
-              </div>
-            ) : (
-              <>
-                {log.args?.join(' ')}
-                {log.stack && (
-                  <details>
-                    <summary>Stack Trace</summary>
-                    <pre>{log.stack}</pre>
-                  </details>
-                )}
-              </>
-            )}
-          </div>
-        ))}
+        {logs.map((entry) => {
+          switch (entry.kind) {
+            case 'log':
+              return (
+                <div
+                  key={entry.id}
+                  className={`m-0 whitespace-pre-wrap ${getLogColor(entry.level)}`}
+                  style={{ marginLeft: `${entry.depth}rem` }}
+                >
+                  {entry.level === 'dir' && entry.snapshot ? (
+                    <TreeNode
+                      nodeId={entry.objectId!}
+                      path={[]}
+                      snapshot={entry.snapshot}
+                      ancestorIds={new Set([entry.objectId!])}
+                    />
+                  ) : entry.level === 'count' ? (
+                    `${entry.label || 'default'}: ${entry.value}`
+                  ) : entry.level === 'timeLog' || entry.level === 'timeEnd' ? (
+                    `${entry.label || 'default'}: ${entry.elapsed?.toFixed(2)} ms${
+                      entry.extra?.length ? ` - ${entry.extra.join(' ')}` : ''
+                    }`
+                  ) : entry.level === 'group' || entry.level === 'groupCollapsed' ? (
+                    `${entry.label || 'Group'}`
+                  ) : entry.level === 'groupEnd' ? null : entry.level === 'table' && entry.tableMeta ? (
+                    <div className="table-container">
+                      <table className="min-w-full border-collapse border border-border">
+                        <thead>
+                          <tr>
+                            {entry.tableMeta.columns.map((col, idx) => (
+                              <th key={idx} className="border border-border px-2 py-1 text-left">{col}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {entry.tableMeta.rows.map((row, rowIdx) => (
+                            <tr key={rowIdx}>
+                              {row.map((cell, cellIdx) => (
+                                <td key={cellIdx} className="border border-border px-2 py-1">{String(cell)}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {entry.tableMeta.truncated && <p className="text-muted-foreground">... (truncated)</p>}
+                    </div>
+                  ) : (
+                    <>
+                      {entry.args?.join(' ')}
+                      {entry.stack && (
+                        <details>
+                          <summary>Stack Trace</summary>
+                          <pre>{entry.stack}</pre>
+                        </details>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            case 'result':
+              return (
+                <div key={entry.id} className="m-0 whitespace-pre-wrap text-gray-300">
+                  <ObjectInspector value={entry.value} />
+                </div>
+              );
+            case 'error':
+              return (
+                <div key={entry.id} className="m-0 whitespace-pre-wrap text-red-400">
+                  {entry.message}
+                </div>
+              );
+            default:
+              return null;
+          }
+        })}
       </div>
     </div>
   );
