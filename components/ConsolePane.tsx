@@ -1,10 +1,19 @@
+// components/ConsolePane.tsx
 'use client';
 import { useConsoleStore } from '@/lib/consoleStore';
 import { TreeNode } from './TreeNode';
 import { ObjectInspector } from './ObjectInspector';
+import { useLayoutEffect, useRef } from 'react';
 
 export default function ConsolePane() {
   const logs = useConsoleStore((s) => s.entries);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (scrollerRef.current) {
+      scrollerRef.current.scrollTo({ top: scrollerRef.current.scrollHeight });
+    }
+  }, [logs]);
 
   const getLogColor = (level: string) => {
     switch (level) {
@@ -27,7 +36,7 @@ export default function ConsolePane() {
 
   return (
     <div className="h-[91vh] w-full overflow-y-auto bg-background border-l border-border shadow-sm">
-      <div className="h-full overflow-y-auto text-foreground console-scroller p-2 text-[13px] leading-[1.4em]">
+      <div ref={scrollerRef} className="h-full overflow-y-auto text-foreground console-scroller p-2 text-[13px] leading-[1.4em]">
         {logs.map((entry) => {
           switch (entry.kind) {
             case 'log':
@@ -76,7 +85,9 @@ export default function ConsolePane() {
                     </div>
                   ) : (
                     <>
-                      {entry.args?.join(' ')}
+                      {entry.args.map((arg, idx) => (
+                        <ObjectInspector key={idx} value={arg} />
+                      ))}
                       {entry.stack && (
                         <details>
                           <summary>Stack Trace</summary>

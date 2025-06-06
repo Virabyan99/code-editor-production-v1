@@ -12,40 +12,29 @@
       const MAX_LEN = 2000;  // chars per serialized item
       const MAX_ROWS = 1000;
 
-      // Lesson 7 state
       const counts = new Map();
       const times = new Map();
       let depth = 0;
 
-      // Lesson 8: Object Explorer
       const store = new Map(); // id → object
       const objectToId = new Map(); // object → id
       const MAX_OBJECTS = 5000;
       const KEYS_LIMIT = 50;
       let nextId = 1;
 
-      // Dialog state
       const pendingDialogs = new Map();
-
-      const safeStringify = (obj) => {
-        try {
-          return JSON.stringify(obj).slice(0, MAX_LEN);
-        } catch {
-          return '[Circular]';
-        }
-      };
 
       function snapshot(obj) {
         const t = Object.prototype.toString.call(obj).slice(8, -1).toLowerCase();
         if (t === 'object' || t === 'array') {
           const keys = Object.keys(obj).slice(0, KEYS_LIMIT);
-          const id = objectToId.get(obj); // Get existing id if object was seen before
+          const id = objectToId.get(obj);
           return {
             type: t,
             preview: t === 'array' ? \`[\${obj.length}]\` : '{…}',
             keys,
             length: t === 'array' ? obj.length : undefined,
-            id: id !== undefined ? id : null // Include id in snapshot
+            id: id !== undefined ? id : null
           };
         }
         if (t === 'function') return { type: 'function', preview: \`f \${obj.name || ''}() {…}\` };
@@ -54,12 +43,18 @@
       }
 
       const send = (level, args, extra = {}) => {
+        const serializedArgs = args.map(arg => {
+          if (typeof arg === 'function') {
+            return { _type: 'function', name: arg.name || 'anonymous' };
+          }
+          return arg;
+        });
         const message = {
           type: 'log',
           payload: {
             level,
             depth,
-            args: args.map(safeStringify),
+            args: serializedArgs,
             ...extra,
           },
         };
@@ -70,7 +65,6 @@
         return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
       }
 
-      // Dialog polyfills
       self.prompt = (msg = '', defVal = '') => {
         const id = generateRequestId();
         return new Promise((resolve) => {

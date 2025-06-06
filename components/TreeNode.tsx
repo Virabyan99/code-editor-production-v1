@@ -12,7 +12,6 @@ interface TreeNodeProps {
 export function TreeNode({ nodeId, path, snapshot, ancestorIds }: TreeNodeProps) {
   const [open, setOpen] = useState(false);
   const { cache } = useExplorer();
-  const node = cache[nodeId.toString()];
 
   const onToggle = () => {
     if (!open && snapshot.keys?.length) {
@@ -33,6 +32,16 @@ export function TreeNode({ nodeId, path, snapshot, ancestorIds }: TreeNodeProps)
   const isRoot = path.length === 0;
   const lastKey = path.slice(-1)[0];
 
+  // Traverse the cache using the path to get the current node
+  let currentNode = cache[nodeId.toString()];
+  for (const seg of path) {
+    if (!currentNode || !currentNode.children) {
+      currentNode = null;
+      break;
+    }
+    currentNode = currentNode.children[seg];
+  }
+
   return (
     <div className="pl-4">
       {snapshot.keys ? (
@@ -46,7 +55,7 @@ export function TreeNode({ nodeId, path, snapshot, ancestorIds }: TreeNodeProps)
       <span>{!isRoot ? ': ' : ''}{snapshot.preview ?? String(snapshot.value)}</span>
       {open && snapshot.keys?.map((key) => {
         const childPath = [...path, key];
-        const childNode = node?.children?.[key];
+        const childNode = currentNode?.children?.[key];
         if (childNode && childNode.snapshot.id !== null && ancestorIds.has(childNode.snapshot.id)) {
           return (
             <div key={key} className="pl-4">

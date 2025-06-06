@@ -1,3 +1,4 @@
+// lib/consoleStore.ts
 import { create } from 'zustand';
 import type { ObjSnapshot } from '@/lib/types';
 
@@ -11,7 +12,7 @@ interface LogEntry extends BaseEntry {
   kind: 'log';
   level: string;
   depth: number;
-  args?: string[];
+  args: unknown[]; // Changed from string[] to unknown[]
   stack?: string;
   tableMeta?: {
     columns: string[];

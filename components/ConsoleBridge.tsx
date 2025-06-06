@@ -1,3 +1,4 @@
+// components/ConsoleBridge.tsx
 'use client';
 import { useConsoleStore } from '@/lib/consoleStore';
 import { useExplorer } from '@/lib/objectExplorer';
@@ -11,7 +12,7 @@ export default function ConsoleBridge() {
   useEffect(() => {
     function onMsg(e: MessageEvent) {
       if (e.data?.type === 'log') {
-        const { level, ...payload } = e.data.payload;
+        const { level, args, ...payload } = e.data.payload;
         if (level === 'clear') {
           clear();
           return;
@@ -21,6 +22,7 @@ export default function ConsoleBridge() {
           ts: Date.now(),
           kind: 'log',
           level,
+          args, // Now raw unknown[]
           ...payload,
         });
       } else if (e.data?.type === 'result') {
