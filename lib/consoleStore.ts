@@ -12,7 +12,7 @@ interface LogEntry extends BaseEntry {
   kind: 'log';
   level: string;
   depth: number;
-  args: unknown[]; // Changed from string[] to unknown[]
+  args: unknown[];
   stack?: string;
   tableMeta?: {
     columns: string[];
@@ -43,6 +43,8 @@ interface ConsoleState {
   entries: Entry[];
   push: (entry: Entry) => void;
   clear: () => void;
+  isOverwrite: boolean;
+  toggleOverwrite: () => void;
 }
 
 export const useConsoleStore = create<ConsoleState>((set) => ({
@@ -51,4 +53,6 @@ export const useConsoleStore = create<ConsoleState>((set) => ({
     entries: [...state.entries, entry],
   })),
   clear: () => set({ entries: [] }),
+  isOverwrite: false, // Default to append mode
+  toggleOverwrite: () => set((state) => ({ isOverwrite: !state.isOverwrite })),
 }));
