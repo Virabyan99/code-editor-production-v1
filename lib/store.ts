@@ -1,17 +1,20 @@
-// lib/store.ts
 import { create } from 'zustand';
 
 interface EditorState {
   code: string;
   setCode: (code: string) => void;
+  wordWrap: boolean;
+  toggleWordWrap: () => void;
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
   code: '',
   setCode: (code) => set({ code }),
+  wordWrap: false, // Default to no word wrap
+  toggleWordWrap: () => set((state) => ({ wordWrap: !state.wordWrap })),
 }));
 
-
+// Existing ConsoleState remains unchanged
 export interface ConsoleEntry {
   id: string;       // UUID v4
   message: string;  // Plain text for MVP

@@ -9,7 +9,7 @@ import { fadeInExtension, addFadeIn } from '@/hooks/fadeInExtension';
 export default function useCodeMirror() {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const { code, setCode } = useEditorStore();
+  const { code, setCode, wordWrap } = useEditorStore();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -20,6 +20,7 @@ export default function useCodeMirror() {
         lineNumbers(),
         javascript({ jsx: true, typescript: true }),
         placeholder('type code here'),
+        ...(wordWrap ? [EditorView.lineWrapping] : []), // Corrected to use EditorView.lineWrapping
         EditorView.theme({
           '&': {
             fontFamily: 'var(--font-fira-code), monospace',
@@ -46,7 +47,7 @@ export default function useCodeMirror() {
             fontSize: '13px',
           },
           '.cm-cursor': {
-            borderLeft: '1px solid var(--foreground)', // Fixed cursor styling
+            borderLeft: '1px solid var(--foreground)',
           },
         }),
         keymap.of(defaultKeymap),
@@ -83,7 +84,7 @@ export default function useCodeMirror() {
       view.destroy();
       viewRef.current = null;
     };
-  }, [containerRef]);
+  }, [containerRef, wordWrap]);
 
   useEffect(() => {
     const view = viewRef.current;
